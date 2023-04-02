@@ -3,9 +3,11 @@ const express = require('express'); // 처음 설치한 express 라이브러리�
 const app = express();
 // body-parser 라이브러리 - post로 넘긴 req의 값을 꺼내기 쉽게
 app.use(express.urlencoded({extended: true})) 
-
 //MongoDB 연결 - 첫번째로 npm install mongodb@3.6.4 로 라이브러리 설치
 const MongoClient = require('mongodb').MongoClient;
+// EJS
+app.set('view engine', 'ejs');
+
 let db;
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/todoapp?retryWrites=true&w=majority', function(error, client){
   //연결되면 할 일
@@ -15,9 +17,9 @@ MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/t
   
   db = client.db('todoapp');
   
-  db.collection('post').insertOne({이름 : 'Jang', _id : 1, 나이 : 30},function(에러, 결과){
-    console.log('저장완료');
-  });
+  // db.collection('post').insertOne({이름 : 'Jang', _id : 1, 나이 : 30},function(에러, 결과){
+  //   console.log('저장완료');
+  // });
   
   app.listen(8080, function(){
     console.log('listening on 8080');
@@ -48,10 +50,22 @@ app.get('/write', function(req, res){
 
 app.post('/add', function(req, res){
   res.send('전송완료');
-  console.log(req.body);
+  console.log(req.body.date);
   console.log(req.body.title);
-})
+  db.collection('post').insertOne({_id : 4, 제목 : req.body.title, 날짜 : req.body.date},function(에러, 결과){
+    console.log('저장완료');
+  });
+});
 
+// /list GET요청으로 접속하면 실제 DB에 저장된 데이터들로 예쁘게 꾸며진 HTML 보여줌
+app.get('/list', function(req, res){
+
+  // DB에 저장된 post라는 collection의 모든데이터를 꺼내기
+  db.collection('post').find().toArray(function(error, result){
+    console.log(result);
+    res.render('list.ejs', {posts : result});
+  });
+});
 
 
 
