@@ -7,7 +7,8 @@ app.use(express.urlencoded({extended: true}))
 const MongoClient = require('mongodb').MongoClient;
 // EJS
 app.set('view engine', 'ejs');
-
+// CSS - static 파일을 보관하기 위해 public 폴더를 쓸 것이다.
+app.use('/public', express.static('public'));
 let db;
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/todoapp?retryWrites=true&w=majority', function(error, client){
   //연결되면 할 일
@@ -41,11 +42,11 @@ app.get('/beauty', function(req, res){
 });
 
 app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
+  res.render(__dirname + '/views/index.ejs');
 });
 
 app.get('/write', function(req, res){
-  res.sendFile(__dirname + '/write.html');
+  res.render(__dirname + '/views/write.ejs');
 });
 
 // DB에 글 저장
@@ -85,8 +86,19 @@ app.delete('/delete', function(req, res){
   // req.body에 담겨온 게시물번호를 가진 글을 DB에서 찾아서 삭제
   db.collection('post').deleteOne(req.body, function(error, result){
     console.log('삭제완료');
+    // 성공인지 실패인지 판정 -> 응답코드 200을 보내주세요
+    res.status(200).send({ message : '성공했습니다'});
   });
 });
 
+
+
+//      /detail로 접속하면 detail.ejs 보여줌
+app.get('/detail/:detailNum', function(req, res){
+  db.collection('post').findOne({_id : parseInt(req.params.detailNum)}, function(error, result){
+    console.log(result);
+    res.render('detail.ejs', { data : result });
+  })
+})
 
 
