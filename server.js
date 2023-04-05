@@ -2,13 +2,17 @@
 const express = require('express'); // 처음 설치한 express 라이브러리의 첨부와 사용
 const app = express();
 // body-parser 라이브러리 - post로 넘긴 req의 값을 꺼내기 쉽게
-app.use(express.urlencoded({extended: true})) 
+app.use(express.urlencoded({extended: true})) ;
 //MongoDB 연결 - 첫번째로 npm install mongodb@3.6.4 로 라이브러리 설치
 const MongoClient = require('mongodb').MongoClient;
 // EJS
 app.set('view engine', 'ejs');
 // CSS - static 파일을 보관하기 위해 public 폴더를 쓸 것이다.
 app.use('/public', express.static('public'));
+// method-override package
+const methodOverride = require('method-override');
+app.use(methodOverride('_method'));
+
 let db;
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/todoapp?retryWrites=true&w=majority', function(error, client){
   //연결되면 할 일
@@ -53,13 +57,13 @@ app.get('/write', function(req, res){
 app.post('/add', function(req, res){
   res.send('전송완료');
   // 서버로 보낸 정보(req) 확인
-  console.log(req.body);
+  // console.log(req.body);
   // 게시물갯수 counter 찾기
   db.collection('counter').findOne({name : '게시물갯수'}, function(error, result){
     let 총게시물갯수 = result.totalPost;
     // 글 저장
     db.collection('post').insertOne({_id : 총게시물갯수 + 1, 제목 : req.body.title, 날짜 : req.body.date},function(에러, 결과){
-      console.log('DB에 글 저장완료');
+      console.log('DB에 글 저장완료');         // ↓ 어떤게시물수정할건지, 수정값, 콜백함수
       // counter collection의 totalPost 도 +1 증가             operator : $set(변경), $inc(증가)
       db.collection('counter').updateOne({name : '게시물갯수'}, { $inc : {totalPost : 1} }, function(error, result){
         if(error) {return console.log(error)};
@@ -73,7 +77,7 @@ app.get('/list', function(req, res){
 
   // DB에 저장된 post라는 collection의 모든데이터를 꺼내기
   db.collection('post').find().toArray(function(error, result){
-    console.log([result]);
+    // console.log([result]);
     res.render('list.ejs', {posts : result});
   });
 });
@@ -81,7 +85,7 @@ app.get('/list', function(req, res){
 
 // DELETE 요청
 app.delete('/delete', function(req, res){
-  console.log(req.body);
+  // console.log(req.body);
   req.body._id = parseInt(req.body._id);
   // req.body에 담겨온 게시물번호를 가진 글을 DB에서 찾아서 삭제
   db.collection('post').deleteOne(req.body, function(error, result){
@@ -96,9 +100,25 @@ app.delete('/delete', function(req, res){
 //      /detail로 접속하면 detail.ejs 보여줌
 app.get('/detail/:detailNum', function(req, res){
   db.collection('post').findOne({_id : parseInt(req.params.detailNum)}, function(error, result){
-    console.log(result);
+    // console.log(result);
     res.render('detail.ejs', { data : result });
   })
 })
 
 
+// Edit 기능
+app.get('/edit/:editNum', function(req, res){
+  db.collection('post').findOne({_id : parseInt(req.params.editNum)}, function(error, result){
+    // console.log(result);
+    res.render('edit.ejs', { data : result });
+  })
+});
+
+
+// Edit 후 다시 DB에 저장
+app.put('/edit', function(req, res){
+  db.collection('post').updateOne({ _id : parseInt(req.body.id) }, { $set : {제목 : req.body.title , 날짜 : req.body.date} }, function(error, result){
+    console.log('Edit 업데이트 완료')
+    res.redirect('/list');
+  });
+})
