@@ -27,6 +27,7 @@
           <a href="/detail/<%= posts[i]._id %>"> <h4>할 일 제목 : <%= posts[i].제목 %></h4></a>
           <h5>할 일 마감날짜 : <%= posts[i].날짜 %></h5>
           <button class="btn btn-danger delete" data-id="<%= posts[i]._id %>">삭제</button>
+          <button class="btn btn-success chat" data-id="<%= posts[i].작성자 %>">채팅하기</button>
         </li>
         <% } %>
       </ul>
@@ -56,6 +57,14 @@
       $('#search').click(function(){
         let 입력한값 = $('#search-input').val();
         window.location.replace(`/search?value=${입력한값}`);
+      });
+
+      // 채팅기능
+      $('.chat').click(function(e){
+        let id = e.target.dataset.id;
+        $.post('/chatroom', {당한사람id : id}).then(()=>{
+          console.log('채팅 성공')
+        })
       });
 
 

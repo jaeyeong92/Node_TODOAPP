@@ -20,6 +20,8 @@ const session = require('express-session');
 app.use(session({secret : '비밀코드', resave : true, saveUninitialized : false}));
 app.use(passport.initialize());
 app.use(passport.session());
+// Object ID
+const { ObjectId } = require('mongodb');
 
 let db;
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/todoapp?retryWrites=true&w=majority', function(error, client){
@@ -228,4 +230,100 @@ app.delete('/delete', function(req, res){
     // 성공인지 실패인지 판정 -> 응답코드 200을 보내주세요
     res.status(200).send({ message : '성공했습니다'});
   });
+});
+
+// shop.js Router       shop.js 파일을 여기에 첨부하겠다
+// 고객이 / 경로로 요청했을 때, 오른쪽 미들웨어를 적용해달라
+// app.use('/shop', require('./routes/shop.js'));
+app.use('/', require('./routes/shop.js')); // app.use(미들웨어)
+
+
+
+// Upload
+// Multer 라이브러리 불러오기
+let multer = require('multer');
+let storage = multer.diskStorage({
+  destination : function(req, file, cb){
+    cb(null, './public/image')
+  },
+  filename : function(req, file, cb){
+    cb(null, file.originalname)
+  }
+});
+
+let upload = multer({storage : storage});
+
+app.get('/upload', function(req,res){
+  res.render('upload.ejs');
+});
+
+app.post('/upload', upload.single('profile'), function(req, res){
+  res.send('업로드 완료');
+});
+
+// Image 보여주기
+app.get('/image/:imageName', function(req, res){
+  res.sendFile( __dirname + '/public/image/' + req.params.imageName )
+});
+
+// Chat
+app.post('/chatroom', 로그인했니, function(req, res){
+  let 저장할것 = {
+    title : '무슨무슨채팅방',
+    member : [ObjectId(req.body.당한사람id), req.user._id],
+    date : new Date()
+  }
+  db.collection('chatroom').insertOne(저장할것).then((result)=>{
+    res.send('성공');
+  });
+});
+
+app.get('/chat', 로그인했니, function(req, res){
+  db.collection('chatroom').find({ member : req.user._id }).toArray().then((result)=>{
+    res.render('chat.ejs', { data : result });
+  });
+});
+
+app.post('/message', 로그인했니, function(req, res){
+
+  let 저장할것 = {
+    parent : req.body.parent,
+    content : req.body.content,
+    userid : req.user._id,
+    date : new Date()
+  }
+
+  db.collection('message').insertOne(저장할것).then(()=>{
+    console.log('DB저장성공')
+    res.send('DB저장성공');
+  });
+});
+
+
+// Server Sent Events (SSE)
+app.get('/message/:id', 로그인했니, function(요청, 응답){
+
+  응답.writeHead(200, {
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+
+  db.collection('message').find({ parent : 요청.params.id }).toArray().then((result)=>{
+    응답.write('event: test\n');
+    응답.write(`data: ${JSON.stringify(result)}\n\n`);
+  });
+
+  const pipeline = [
+    { $match: { 'fullDocument.parent' : 요청.params.id } }
+  ];
+  
+  const collection = db.collection('message');
+  const changeStream = collection.watch(pipeline);
+
+  changeStream.on('change', (result) => {
+    응답.write('event: test\n');
+    응답.write(`data: ${JSON.stringify([result.fullDocument])}\n\n`);
+  });
+
 });
