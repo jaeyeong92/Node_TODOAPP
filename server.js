@@ -22,6 +22,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 // Object ID
 const { ObjectId } = require('mongodb');
+// socket.io
+const http = require('http').createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(http);
 
 let db;
 MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/todoapp?retryWrites=true&w=majority', function(error, client){
@@ -36,7 +40,7 @@ MongoClient.connect('mongodb+srv://admin:qwer1234@cluster0.v4iodsa.mongodb.net/t
   //   console.log('저장완료');
   // });
   
-  app.listen(8080, function(){
+  http.listen(8080, function(){
     console.log('listening on 8080');
   });
 });
@@ -325,5 +329,34 @@ app.get('/message/:id', 로그인했니, function(요청, 응답){
     응답.write('event: test\n');
     응답.write(`data: ${JSON.stringify([result.fullDocument])}\n\n`);
   });
+});
 
+// socket.io
+app.get('/socket',function(req, res){
+  res.render('socket.ejs');
+});
+
+// 누가 웹소켓 접속하면 내부 코드를 실행
+io.on('connection',function(socket){
+  console.log('유저접속됨')
+
+  // 채팅방 생성 + 유저 집어넣기
+  socket.on('joinroom',function(data){
+    socket.join('room1');
+  });
+
+  // 채팅방1 유저에게 메세지 전송
+  socket.on('room1-send',function(data){
+    io.to('room1').emit('broadcast',data);
+  });
+  
+
+  // 유저 -> 서버로의 메세지 수신은 socket.on()
+  // 즉, 유저로부터 수신한 user-send를 다시 유저에게 전송, 즉 채팅처럼
+  socket.on('user-send', function(data){
+    // 서버 -> 유저로의 메세지 전송
+    io.emit('broadcast',data);
+    // 서버 <-> 유저 1명과의 소통
+    // io.to(socket.id).emit('broadcast',data);
+  });
 });
